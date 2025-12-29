@@ -1,9 +1,9 @@
-import { InputHTMLAttributes } from "react";
+import { InputHTMLAttributes, ReactNode } from "react";
 
 type TextFieldProps = {
   label: string;
   type?: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
 } & InputHTMLAttributes<HTMLInputElement>;
 
 export function TextField({ label, type = "text", icon, ...props }: TextFieldProps) {
