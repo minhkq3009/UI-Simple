@@ -18,7 +18,6 @@ import {
 export default function CreateBookingPage() {
   return (
     <div className="min-h-screen bg-gray-100 px-6 py-6">
-      {/* Top row: back home + actions */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-gray-700">
           <Link
@@ -68,7 +67,6 @@ export default function CreateBookingPage() {
               />
             </div>
 
-            {/* Col 2: Departure date + time */}
             <div className="flex h-full flex-col justify-between space-y-4">
               <TextField
                 label={
@@ -123,7 +121,6 @@ export default function CreateBookingPage() {
               />
             </div>
 
-            {/* Col 4: Note ở cột cuối, full-height */}
             <div className="flex h-full flex-col space-y-1">
               <label className="text-sm font-medium text-gray-700">Note</label>
               <textarea
@@ -154,7 +151,6 @@ export default function CreateBookingPage() {
                     />
                   </div>
 
-                  {/* New location */}
                   <label className="inline-flex items-center gap-2 text-xs text-gray-700 whitespace-nowrap">
                     <input
                       type="checkbox"
@@ -165,8 +161,7 @@ export default function CreateBookingPage() {
                   </label>
                 </div>
               </div>
-
-              {/* Delete icon sát ngay dưới khối List of Passenger */}
+              
               <div className="mt-1 flex items-center">
                 <button
                   type="button"
@@ -214,7 +209,7 @@ export default function CreateBookingPage() {
         </div>
       </div>
 
-      {/* Bottom table preview + submit */}
+      {/* Bottom table preview */}
       <div className="overflow-hidden rounded border border-gray-300 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full border-collapse text-sm">
@@ -272,10 +267,7 @@ export default function CreateBookingPage() {
                   Vincom Center Metropolis, Phố Liễu Giai, Ngọc Khánh, Ba Đình,
                   Hà Nội, Việt Nam - Hà Nội
                 </td>
-                <td className="border-t border-r border-gray-200 px-3 py-2">
-                  {/* Note cell */}
-                </td>
-                {/* Lunch: textfield "no need" */}
+                <td className="border-t border-r border-gray-200 px-3 py-2" />
                 <td className="border-t border-r border-gray-200 px-3 py-2">
                   <div className="max-w-[140px]">
                     <TextField
@@ -286,7 +278,6 @@ export default function CreateBookingPage() {
                     />
                   </div>
                 </td>
-                {/* Booking hotel: dropdown list */}
                 <td className="border-t border-r border-gray-200 px-3 py-2">
                   <div className="max-w-[140px]">
                     <Select
@@ -298,7 +289,6 @@ export default function CreateBookingPage() {
                     />
                   </div>
                 </td>
-                {/* Action: edit + delete icons */}
                 <td className="border-t border-gray-200 px-3 py-2">
                   <div className="flex items-center gap-2">
                     <button
@@ -319,15 +309,16 @@ export default function CreateBookingPage() {
             </tbody>
           </table>
         </div>
+      </div>
 
-        <div className="flex justify-center border-t border-gray-200 bg-white px-4 py-3">
-          <Button
-            type="button"
-            className="rounded bg-sky-500 px-6 py-2 text-sm font-medium text-white hover:bg-sky-600"
-          >
-            Submit
-          </Button>
-        </div>
+      {/* Submit button dưới bảng, ra hẳn ngoài card */}
+      <div className="mt-4 flex justify-end">
+        <Button
+          type="button"
+          className="rounded bg-sky-500 px-6 py-2 text-sm font-medium text-white hover:bg-sky-600"
+        >
+          Submit
+        </Button>
       </div>
     </div>
   );

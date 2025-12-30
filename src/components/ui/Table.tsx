@@ -17,7 +17,7 @@ function EmptyState() {
 }
 
 export function Table() {
-  const bookings = MOCK_BOOKINGS; // replace with API data later
+  const bookings = MOCK_BOOKINGS;
 
   if (bookings.length === 0) {
     return <EmptyState />;

@@ -12,8 +12,6 @@ export type Booking = {
   bookingHotel: string;
   status: BookingStatus;
 };
-
-// Mock data tạm thời, sau này thay bằng dữ liệu lấy từ API/DB
 export const MOCK_BOOKINGS: Booking[] = [
   {
     id: 1,

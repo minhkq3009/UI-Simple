@@ -47,7 +47,6 @@ export default function Bookings() {
           {/* Block 2: filters */}
           <div className="border-b border-gray-200 px-4 py-5 text-xs text-gray-700">
             <div className="flex flex-col gap-6">
-              {/* Row 1: Booking checkboxes + date range + total box checked */}
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-3">
                   <label className="inline-flex items-center gap-1">
@@ -85,7 +84,6 @@ export default function Bookings() {
                 </div>
               </div>
 
-              {/* Row 3: Filter textfield + Show page size */}
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center">
                   <TextField
