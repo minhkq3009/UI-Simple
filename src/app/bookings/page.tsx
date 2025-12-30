@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Header } from "@/components/layout/Header";
 import { Table } from "@/components/ui/Table";
 import { Button } from "@/components/ui/Button";
@@ -20,13 +21,15 @@ export default function Bookings() {
         <div className="overflow-hidden rounded border border-gray-300 bg-white shadow-sm">
           {/* Block 1: New + action icons */}
           <div className="flex items-center justify-between gap-4 border-b border-gray-200 px-4 py-3 text-xs text-gray-700">
-            <Button
-              type="button"
-              icon={<Plus className="h-4 w-4" />}
-              className="w-auto rounded-sm bg-green-800 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
-            >
-              New
-            </Button>
+            <Link href="/create-booking">
+              <Button
+                type="button"
+                icon={<Plus className="h-4 w-4" />}
+                className="w-auto rounded-sm bg-green-800 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+              >
+                New
+              </Button>
+            </Link>
 
             <div className="flex items-center gap-2">
               <button className="flex h-8 w-8 items-center justify-center rounded bg-red-500 text-white hover:bg-red-600">

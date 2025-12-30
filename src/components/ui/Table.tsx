@@ -26,7 +26,7 @@ export function Table() {
   return (
     <>
       <div className="overflow-x-auto">
-        <table className="min-w-full border-collapse text-sm">
+        <table className="min-w-full border-collapse text-md">
           <thead className="bg-[#0c6c96] text-white">
             <tr>
               <th className="w-10 border-b border-r border-[#0b5b7e] px-4 py-3 text-left">
@@ -79,31 +79,31 @@ export function Table() {
                 <td className="border-t border-r border-gray-200 px-4 py-3">
                   <StatusBadge status={b.status} />
                 </td>
-                <td className="w-[260px] border-t border-r border-gray-200 px-4 py-3 align-top text-xs text-gray-900 leading-snug whitespace-normal">
+                <td className="w-[260px] border-t border-r border-gray-200 px-4 py-3 align-top text-sm text-gray-900 leading-snug whitespace-normal">
                   {b.passenger}
                 </td>
-                <td className="border-t border-r border-gray-200 px-4 py-3 text-xs text-gray-700 whitespace-nowrap">
+                <td className="border-t border-r border-gray-200 px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
                   {b.date}
                 </td>
-                <td className="border-t border-r border-gray-200 px-4 py-3 text-xs text-gray-700 whitespace-nowrap">
+                <td className="border-t border-r border-gray-200 px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
                   {b.time}
                 </td>
-                <td className="border-t border-r border-gray-200 px-4 py-3 text-xs text-gray-700 whitespace-nowrap">
+                <td className="border-t border-r border-gray-200 px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
                   {b.pickupTime}
                 </td>
-                <td className="border-t border-r border-gray-200 px-4 py-3 text-xs text-gray-700">
+                <td className="border-t border-r border-gray-200 px-4 py-3 text-sm text-gray-700">
                   {b.from}
                 </td>
-                <td className="border-t border-r border-gray-200 px-4 py-3 text-xs text-gray-700">
+                <td className="border-t border-r border-gray-200 px-4 py-3 text-sm text-gray-700">
                   {b.to}
                 </td>
-                <td className="border-t border-r border-gray-200 px-4 py-3 text-xs text-gray-700 whitespace-nowrap">
+                <td className="border-t border-r border-gray-200 px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
                   {b.lunch}
                 </td>
-                <td className="border-t border-r border-gray-200 px-4 py-3 text-xs text-gray-700 whitespace-nowrap">
+                <td className="border-t border-r border-gray-200 px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
                   {b.bookingHotel}
                 </td>
-                <td className="border-t border-r border-gray-200 px-4 py-3 text-xs text-gray-700 whitespace-nowrap">
+                <td className="border-t border-r border-gray-200 px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
                   ...
                 </td>
               </tr>

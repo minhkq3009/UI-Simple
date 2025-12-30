@@ -1,10 +1,11 @@
 import { InputHTMLAttributes, ReactNode } from "react";
 
 type TextFieldProps = {
-  label: string;
+  label: ReactNode;
   type?: string;
   icon?: ReactNode;
   iconPosition?: "left" | "right";
+  rightAdornment?: ReactNode;
   variant?: "stacked" | "inline";
   inputClassName?: string;
 } & InputHTMLAttributes<HTMLInputElement>;
@@ -14,6 +15,7 @@ export function TextField({
   type = "text",
   icon,
   iconPosition = "left",
+  rightAdornment,
   variant = "stacked",
   inputClassName,
   ...props
@@ -43,6 +45,7 @@ export function TextField({
         {icon && iconPosition === "right" && (
           <span className="text-gray-400">{icon}</span>
         )}
+        {rightAdornment && <span>{rightAdornment}</span>}
       </div>
     </div>
   );
