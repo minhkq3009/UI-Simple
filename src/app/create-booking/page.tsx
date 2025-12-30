@@ -312,7 +312,7 @@ export default function CreateBookingPage() {
       </div>
 
       {/* Submit button dưới bảng, ra hẳn ngoài card */}
-      <div className="mt-4 flex justify-end">
+      <div className="mt-4 flex justify-center">
         <Button
           type="button"
           className="rounded bg-sky-500 px-6 py-2 text-sm font-medium text-white hover:bg-sky-600"
