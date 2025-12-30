@@ -1,6 +1,5 @@
 import { BookingToolbar } from "./BookingToolbar";
-
-type BookingStatus = "Completed" | "Pending" | "Canceled";
+import { StatusBadge, BookingStatus } from "./StatusBadge";
 
 type Booking = {
   id: number;
@@ -31,23 +30,6 @@ const mockBookings: Booking[] = [
   },
 ];
 
-function StatusBadge({ status }: { status: BookingStatus }) {
-  const style =
-    status === "Completed"
-      ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-      : status === "Pending"
-      ? "bg-amber-100 text-amber-700 border-amber-200"
-      : "bg-rose-100 text-rose-700 border-rose-200";
-
-  return (
-    <span
-      className={`inline-flex min-w-[96px] items-center justify-center rounded-full border px-3 py-1 text-xs font-semibold ${style}`}
-    >
-      {status}
-    </span>
-  );
-}
-
 function EmptyState() {
   return (
     <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 py-16">
@@ -63,7 +45,7 @@ function EmptyState() {
   );
 }
 
-export function BookingTable() {
+export function Table() {
   const bookings = mockBookings; // replace with API data later
 
   if (bookings.length === 0) {
