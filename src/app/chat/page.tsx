@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Image from "next/image";
 import {
   Plus,
   MessageSquare,
@@ -35,6 +36,7 @@ type Theme = "light" | "dark";
 export default function ChatPage() {
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
@@ -86,30 +88,115 @@ export default function ChatPage() {
     >
       {/* Sidebar trái giống ChatGPT 4.x */}
       <aside
-        className={`flex min-h-screen w-[270px] flex-col border-r backdrop-blur-sm shadow-sm ${
+        className={`flex min-h-screen flex-col border-r backdrop-blur-sm shadow-sm transition-all duration-200 ${
+          isSidebarCollapsed ? "w-[80px]" : "w-[270px]"
+        } ${
           isDark
             ? "border-gray-800 bg-[#202123] text-gray-100"
             : "border-gray-200 bg-white/95 text-gray-900"
         }`}
       >
-        {/* Top: logo ChatGPT + workspace */}
-        <div className="flex items-center justify-between px-3 py-3">
-          <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-black text-white">
-              <span className="text-xs">GPT</span>
-            </div>
-            <span>ChatGPT</span>
+        {/* Top: logo ChatGPT + collapse icon */}
+        {isSidebarCollapsed ? (
+          /* Thu gọn: chỉ còn logo, hover hiện icon collapse/expand giống ChatGPT */
+          <div className="flex items-center justify-center px-3 py-3">
+            <button
+              type="button"
+              aria-label="Expand sidebar"
+              className="group relative flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100/10"
+              onClick={() => setIsSidebarCollapsed(false)}
+            >
+              <Image
+                src="/assets/image.png"
+                alt="ChatGPT logo"
+                width={28}
+                height={28}
+                className={`h-7 w-7 ${isDark ? "invert" : ""}`}
+              />
+              <span className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100">
+                <span
+                  className={`flex h-7 w-7 items-center justify-center rounded-xl ${
+                    isDark ? "bg-white/10" : "bg-gray-100"
+                  }`}
+                >
+                  <span
+                    className={`flex h-5 w-5 items-center justify-center rounded-xl border ${
+                      isDark ? "border-white/70" : "border-gray-500"
+                    }`}
+                  >
+                    <span className="flex h-3.5 w-3 items-center justify-between">
+                      <span
+                        className={`h-full w-[6px] rounded-sm ${
+                          isDark ? "bg-white" : "bg-gray-600"
+                        }`}
+                      />
+                      <span
+                        className={`h-full w-[2px] rounded-sm ${
+                          isDark ? "bg-white/70" : "bg-gray-400"
+                        }`}
+                      />
+                    </span>
+                  </span>
+                </span>
+              </span>
+            </button>
           </div>
-        </div>
+        ) : (
+          /* Mở rộng: logo + nút collapse tách riêng như hiện tại */
+          <div className="flex items-center justify-between px-3 py-3">
+            <div className="flex items-center">
+              <Image
+                src="/assets/image.png"
+                alt="ChatGPT logo"
+                width={28}
+                height={28}
+                className={`h-7 w-7 ${isDark ? "invert" : ""}`}
+              />
+            </div>
+            <button
+              type="button"
+              aria-label="Collapse sidebar"
+              className={`inline-flex h-7 w-7 items-center justify-center rounded-md border text-gray-500 ${
+                isDark ? "border-gray-600 hover:bg-[#2a2b32]" : "border-gray-300 hover:bg-gray-100"
+              }`}
+              onClick={() => setIsSidebarCollapsed(true)}
+            >
+              <span className="relative inline-flex h-4 w-4 items-center justify-center">
+                <span
+                  className={`absolute left-[3px] h-3 w-[2px] rounded-sm ${
+                    isDark ? "bg-gray-400" : "bg-gray-500"
+                  }`}
+                />
+                <span
+                  className={`absolute right-[3px] h-3 w-[6px] rounded-sm ${
+                    isDark ? "bg-gray-400" : "bg-gray-500"
+                  }`}
+                />
+              </span>
+            </button>
+          </div>
+        )}
 
         {/* Nút New chat */}
-        <div className="px-3 pb-2">
+        <div>
           <button
             type="button"
-            className="flex w-full items-center gap-2 rounded-full bg-black px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+            className={`group flex w-full items-center gap-2 rounded-full px-2 py-1.5 text-sm ${
+              isDark
+                ? "text-gray-100 hover:bg-[#2a2b32]"
+                : "text-gray-800 hover:bg-gray-100"
+            } ${isSidebarCollapsed ? "justify-center" : ""}`}
           >
-            <Plus className="h-4 w-4" />
-            <span>New chat</span>
+            <span
+              className={`flex items-center justify-center ${
+                isSidebarCollapsed
+                  ? "h-7 w-7 rounded-xl bg-transparent group-hover:bg-gray-100"
+                  : ""
+              }`}
+            >
+              <Plus className="h-4 w-4" />
+            </span>
+            {!isSidebarCollapsed && <span>New chat</span>}
           </button>
         </div>
 
@@ -119,118 +206,160 @@ export default function ChatPage() {
             isDark ? "text-gray-200" : "text-gray-700"
           }`}
         >
-          <button className="flex w-full items-center gap-2 rounded-full px-3 py-2 hover:bg-gray-100">
-            <Search className="h-4 w-4" />
-            <span>Search chats</span>
+          <button
+            className={`group flex w-full items-center gap-2 rounded-full px-2 py-2 ${
+              isDark ? "hover:bg-[#2a2b32]" : "hover:bg-gray-100"
+            } ${isSidebarCollapsed ? "justify-center" : ""}`}
+          >
+            <span
+              className={`flex items-center justify-center ${
+                isSidebarCollapsed
+                  ? "h-7 w-7 rounded-xl bg-transparent group-hover:bg-gray-100"
+                  : ""
+              }`}
+            >
+              <Search className="h-4 w-4" />
+            </span>
+            {!isSidebarCollapsed && <span>Search chats</span>}
           </button>
-          <button className="flex w-full items-center gap-2 rounded-full px-3 py-2 hover:bg-gray-100">
-            <ImageIcon className="h-4 w-4" />
-            <span>Images</span>
+          <button
+            className={`group flex w-full items-center gap-2 rounded-full px-2 py-2 ${
+              isDark ? "hover:bg-[#2a2b32]" : "hover:bg-gray-100"
+            } ${isSidebarCollapsed ? "justify-center" : ""}`}
+          >
+            <span
+              className={`flex items-center justify-center ${
+                isSidebarCollapsed
+                  ? "h-7 w-7 rounded-xl bg-transparent group-hover:bg-gray-100"
+                  : ""
+              }`}
+            >
+              <ImageIcon className="h-4 w-4" />
+            </span>
+            {!isSidebarCollapsed && <span>Images</span>}
           </button>
-          <button className="flex w-full items-center gap-2 rounded-full px-3 py-2 hover:bg-gray-100">
-            <AppWindow className="h-4 w-4" />
-            <span>Apps</span>
+          <button
+            className={`group flex w-full items-center gap-2 rounded-full px-2 py-2 ${
+              isDark ? "hover:bg-[#2a2b32]" : "hover:bg-gray-100"
+            } ${isSidebarCollapsed ? "justify-center" : ""}`}
+          >
+            <span
+              className={`flex items-center justify-center ${
+                isSidebarCollapsed
+                  ? "h-7 w-7 rounded-xl bg-transparent group-hover:bg-gray-100"
+                  : ""
+              }`}
+            >
+              <AppWindow className="h-4 w-4" />
+            </span>
+            {!isSidebarCollapsed && <span>Apps</span>}
           </button>
-          <button className="flex w-full items-center gap-2 rounded-full px-3 py-2 hover:bg-gray-100">
-            <FolderKanban className="h-4 w-4" />
-            <span>Projects</span>
+          <button
+            className={`group flex w-full items-center gap-2 rounded-full px-2 py-2 ${
+              isDark ? "hover:bg-[#2a2b32]" : "hover:bg-gray-100"
+            } ${isSidebarCollapsed ? "justify-center" : ""}`}
+          >
+            <span
+              className={`flex items-center justify-center ${
+                isSidebarCollapsed
+                  ? "h-7 w-7 rounded-xl bg-transparent group-hover:bg-gray-100"
+                  : ""
+              }`}
+            >
+              <FolderKanban className="h-4 w-4" />
+            </span>
+            {!isSidebarCollapsed && <span>Projects</span>}
           </button>
         </nav>
 
-        {/* Your chats section */}
+        {/* Your chats section (giữ flex-1 để account luôn ở đáy) */}
         <div
           className={`mt-1 flex-1 overflow-y-auto border-t pt-3 text-sm ${
             isDark ? "border-gray-800" : "border-gray-100"
           }`}
         >
-          <div
-            className={`px-3 text-xs font-semibold uppercase tracking-wide ${
-              isDark ? "text-gray-400" : "text-gray-500"
-            }`}
-          >
-            Your chats
-          </div>
-          <div className="mt-2 space-y-1 px-1">
-            <button
-              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left ${
-                isDark
-                  ? "text-gray-100 hover:bg-[#2a2b32]"
-                  : "text-gray-800 hover:bg-gray-100"
-              }`}
-            >
-              <MessageSquare
-                className={`h-4 w-4 ${
+          {!isSidebarCollapsed && (
+            <>
+              <div
+                className={`px-3 text-xs font-semibold uppercase tracking-wide ${
                   isDark ? "text-gray-400" : "text-gray-500"
                 }`}
-              />
-              <span className="truncate">Giới thiệu về Nuxt</span>
-            </button>
-            <button
-              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left ${
-                isDark
-                  ? "text-gray-100 hover:bg-[#2a2b32]"
-                  : "text-gray-800 hover:bg-gray-100"
-              }`}
-            >
-              <MessageSquare
-                className={`h-4 w-4 ${
-                  isDark ? "text-gray-400" : "text-gray-500"
-                }`}
-              />
-              <span className="truncate">Giải thích mã Node.js</span>
-            </button>
-            <button
-              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left ${
-                isDark
-                  ? "text-gray-100 hover:bg-[#2a2b32]"
-                  : "text-gray-800 hover:bg-gray-100"
-              }`}
-            >
-              <MessageSquare
-                className={`h-4 w-4 ${
-                  isDark ? "text-gray-400" : "text-gray-500"
-                }`}
-              />
-              <span className="truncate">RAG là gì</span>
-            </button>
-          </div>
+              >
+                Your chats
+              </div>
+              <div className="mt-2 space-y-1 px-1">
+                <button
+                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left ${
+                    isDark
+                      ? "text-gray-100 hover:bg-[#2a2b32]"
+                      : "text-gray-800 hover:bg-gray-100"
+                  }`}
+                >
+                  <MessageSquare
+                    className={`h-4 w-4 ${
+                      isDark ? "text-gray-400" : "text-gray-500"
+                    }`}
+                  />
+                  <span className="truncate">Giới thiệu về Nuxt</span>
+                </button>
+                <button
+                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left ${
+                    isDark
+                      ? "text-gray-100 hover:bg-[#2a2b32]"
+                      : "text-gray-800 hover:bg-gray-100"
+                  }`}
+                >
+                  <MessageSquare
+                    className={`h-4 w-4 ${
+                      isDark ? "text-gray-400" : "text-gray-500"
+                    }`}
+                  />
+                  <span className="truncate">Giải thích mã Node.js</span>
+                </button>
+                <button
+                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left ${
+                    isDark
+                      ? "text-gray-100 hover:bg-[#2a2b32]"
+                      : "text-gray-800 hover:bg-gray-100"
+                  }`}
+                >
+                  <MessageSquare
+                    className={`h-4 w-4 ${
+                      isDark ? "text-gray-400" : "text-gray-500"
+                    }`}
+                  />
+                  <span className="truncate">RAG là gì</span>
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Footer user info + account menu */}
+        {/* Footer user info / account avatar */}
         <div
           className={`relative border-t px-3 py-3 text-sm ${
             isDark ? "border-gray-800" : "border-gray-100"
           }`}
         >
           {isAccountMenuOpen && (
-            <div className="absolute bottom-12 left-0 right-0 z-20 px-1">
+            <div className="absolute bottom-14 left-0 right-0 z-20 px-1">
               <div
                 className={`overflow-hidden rounded-2xl border shadow-xl ${
                   isDark
-                    ? "border-gray-700 bg-[#202123]"
-                    : "border-gray-200 bg-white"
+                    ? "border-gray-700 bg-[#202123] text-gray-100"
+                    : "border-gray-200 bg-white text-gray-900"
                 }`}
               >
                 <div className="flex items-center gap-3 px-3 py-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-500 text-xs font-semibold text-white">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-xs font-semibold text-white">
                     MK
                   </div>
-                  <div className="flex flex-col">
-                    <span
-                      className={`text-sm font-medium ${
-                        isDark ? "text-gray-50" : "text-gray-900"
-                      }`}
-                    >
-                      Minh Kim
-                    </span>
-                    <span
-                      className={`text-xs ${
-                        isDark ? "text-gray-400" : "text-gray-500"
-                      }`}
-                    >
-                      kimquangminh.jvb
-                    </span>
-                  </div>
+                  {!isSidebarCollapsed && (
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">Minh Kim</span>
+                      <span className="text-xs text-gray-400">Free</span>
+                    </div>
+                  )}
                 </div>
 
                 <div
@@ -244,22 +373,6 @@ export default function ChatPage() {
                     isDark ? "text-gray-200" : "text-gray-700"
                   }`}
                 >
-                  <button
-                    className={`flex w-full items-center gap-2 px-4 py-2 ${
-                      isDark ? "hover:bg-[#2a2b32]" : "hover:bg-gray-50"
-                    }`}
-                  >
-                    <Sparkles className="h-4 w-4 text-purple-500" />
-                    <span>Upgrade plan</span>
-                  </button>
-                  <button
-                    className={`flex w-full items-center gap-2 px-4 py-2 ${
-                      isDark ? "hover:bg-[#2a2b32]" : "hover:bg-gray-50"
-                    }`}
-                  >
-                    <Palette className="h-4 w-4 text-gray-500" />
-                    <span>Personalization</span>
-                  </button>
                   <button
                     className={`flex w-full items-center gap-2 px-4 py-2 ${
                       isDark ? "hover:bg-[#2a2b32]" : "hover:bg-gray-50"
@@ -294,30 +407,45 @@ export default function ChatPage() {
             </div>
           )}
 
-          <button
-            type="button"
-            className={`flex w-full items-center justify-between rounded-xl px-2 py-1 ${
-              isDark ? "hover:bg-[#2a2b32]" : "hover:bg-gray-100"
-            }`}
-            onClick={() => setIsAccountMenuOpen((prev) => !prev)}
-          >
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-500 text-xs font-semibold text-white">
+          {isSidebarCollapsed ? (
+            /* Chế độ thu gọn: chỉ còn avatar tròn */
+            <div className="flex justify-center">
+              <button
+                type="button"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-xs font-semibold text-white hover:brightness-110"
+                onClick={() => setIsAccountMenuOpen((prev) => !prev)}
+                aria-label="Account menu"
+              >
                 MK
-              </div>
-              <div className="flex flex-col items-start">
-                <span
-                  className={`text-xs font-medium ${
-                    isDark ? "text-gray-100" : "text-gray-800"
-                  }`}
-                >
-                  Minh Kim
-                </span>
-                <span className="text-[11px] text-gray-500">Free</span>
-              </div>
+              </button>
             </div>
-            <span className="text-[11px] text-gray-500">Upgrade</span>
-          </button>
+          ) : (
+            /* Chế độ mở rộng: pill Minh Kim – Free – Upgrade */
+            <button
+              type="button"
+              className={`flex w-full items-center justify-between rounded-xl px-2 py-1 ${
+                isDark ? "hover:bg-[#2a2b32]" : "hover:bg-gray-100"
+              }`}
+              onClick={() => setIsAccountMenuOpen((prev) => !prev)}
+            >
+              <div className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-500 text-xs font-semibold text-white">
+                  MK
+                </div>
+                <div className="flex flex-col items-start">
+                  <span
+                    className={`text-xs font-medium ${
+                      isDark ? "text-gray-100" : "text-gray-800"
+                    }`}
+                  >
+                    Minh Kim
+                  </span>
+                  <span className="text-[11px] text-gray-500">Free</span>
+                </div>
+              </div>
+              <span className="text-[11px] text-gray-500">Upgrade</span>
+            </button>
+          )}
         </div>
       </aside>
 
