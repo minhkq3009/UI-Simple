@@ -84,6 +84,26 @@ export default function ChatPage() {
 
   const isDark = theme === "dark";
 
+  // Common CSS for sidebar main buttons (New chat, Search, Images, Apps, Projects)
+  const sidebarMainButtonClass = `group flex w-full items-center gap-2 rounded-full px-4 py-2 text-sm ${
+    isDark ? "hover:bg-[#2a2b32]" : "hover:bg-gray-100"
+  } ${isSidebarCollapsed ? "justify-center" : ""}`;
+
+  // Khởi tạo theme từ localStorage (giữ lại dark mode sau khi reload)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const storedTheme = window.localStorage.getItem("chat:theme");
+    if (storedTheme === "light" || storedTheme === "dark") {
+      setTheme(storedTheme as Theme);
+    }
+  }, []);
+
+  // Lưu theme mỗi khi thay đổi
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("chat:theme", theme);
+  }, [theme]);
+
   // Đọc language + trạng thái mở Settings sau khi reload
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -98,12 +118,6 @@ export default function ChatPage() {
       };
       setLanguage(mapped[storedLang]);
     }
-
-    const reopen = window.localStorage.getItem("chat:openSettingsAfterReload");
-    if (reopen === "1") {
-      setIsSettingsOpen(true);
-      window.localStorage.removeItem("chat:openSettingsAfterReload");
-    }
   }, [i18n]);
 
   const handleLanguageChange = (opt: LanguageOption, lng: string) => {
@@ -111,9 +125,8 @@ export default function ChatPage() {
     i18n.changeLanguage(lng);
     if (typeof window !== "undefined") {
       window.localStorage.setItem("chat:language", lng);
-      window.localStorage.setItem("chat:openSettingsAfterReload", "1");
-      window.location.reload();
     }
+    setIsLanguageOpen(false);
   };
 
   return (
@@ -215,40 +228,29 @@ export default function ChatPage() {
           </div>
         )}
 
-        {/* Nút New chat */}
-        <div>
-          <button
-            type="button"
-            className={`group flex w-full items-center gap-2 rounded-full px-2 py-1.5 text-sm ${
-              isDark
-                ? "text-gray-100 hover:bg-[#2a2b32]"
-                : "text-gray-800 hover:bg-gray-100"
-            } ${isSidebarCollapsed ? "justify-center" : ""}`}
-          >
-            <span
-              className={`flex items-center justify-center ${
-                isSidebarCollapsed
-                  ? "h-7 w-7 rounded-xl bg-transparent group-hover:bg-gray-100"
-                  : ""
-              }`}
-            >
-              <Plus className="h-4 w-4" />
-            </span>
-            {!isSidebarCollapsed && <span>{t("sidebar.newChat")}</span>}
-          </button>
-        </div>
-
-        {/* Navigation items: Search, Images, Apps, Projects */}
+        {/* Nút New chat + navigation items */}
         <nav
-          className={`px-1 pb-3 text-sm ${
-            isDark ? "text-gray-200" : "text-gray-700"
-          }`}
+          className={`text-sm ${isDark ? "text-gray-200" : "text-gray-700"}`}
         >
-          <button
-            className={`group flex w-full items-center gap-2 rounded-full px-2 py-2 ${
-              isDark ? "hover:bg-[#2a2b32]" : "hover:bg-gray-100"
-            } ${isSidebarCollapsed ? "justify-center" : ""}`}
-          >
+          <div>
+            <button
+              type="button"
+              className={sidebarMainButtonClass}
+            >
+              <span
+                className={`flex items-center justify-center ${
+                  isSidebarCollapsed
+                    ? "h-7 w-7 rounded-xl bg-transparent group-hover:bg-gray-100"
+                    : ""
+                }`}
+              >
+                <Plus className="h-4 w-4" />
+              </span>
+              {!isSidebarCollapsed && <span>{t("sidebar.newChat")}</span>}
+            </button>
+          </div>
+
+          <button className={sidebarMainButtonClass}>
             <span
               className={`flex items-center justify-center ${
                 isSidebarCollapsed
@@ -260,11 +262,7 @@ export default function ChatPage() {
             </span>
             {!isSidebarCollapsed && <span>{t("sidebar.searchChats")}</span>}
           </button>
-          <button
-            className={`group flex w-full items-center gap-2 rounded-full px-2 py-2 ${
-              isDark ? "hover:bg-[#2a2b32]" : "hover:bg-gray-100"
-            } ${isSidebarCollapsed ? "justify-center" : ""}`}
-          >
+          <button className={sidebarMainButtonClass}>
             <span
               className={`flex items-center justify-center ${
                 isSidebarCollapsed
@@ -276,11 +274,7 @@ export default function ChatPage() {
             </span>
             {!isSidebarCollapsed && <span>{t("sidebar.images")}</span>}
           </button>
-          <button
-            className={`group flex w-full items-center gap-2 rounded-full px-2 py-2 ${
-              isDark ? "hover:bg-[#2a2b32]" : "hover:bg-gray-100"
-            } ${isSidebarCollapsed ? "justify-center" : ""}`}
-          >
+          <button className={sidebarMainButtonClass}>
             <span
               className={`flex items-center justify-center ${
                 isSidebarCollapsed
@@ -292,11 +286,7 @@ export default function ChatPage() {
             </span>
             {!isSidebarCollapsed && <span>{t("sidebar.apps")}</span>}
           </button>
-          <button
-            className={`group flex w-full items-center gap-2 rounded-full px-2 py-2 ${
-              isDark ? "hover:bg-[#2a2b32]" : "hover:bg-gray-100"
-            } ${isSidebarCollapsed ? "justify-center" : ""}`}
-          >
+          <button className={sidebarMainButtonClass}>
             <span
               className={`flex items-center justify-center ${
                 isSidebarCollapsed
@@ -741,7 +731,10 @@ export default function ChatPage() {
                         className={`flex items-center gap-1.5 text-sm ${
                           isDark ? "text-gray-100" : "text-gray-700"
                         }`}
-                        onClick={() => setIsAppearanceOpen((prev) => !prev)}
+                        onClick={() => {
+                          setIsAppearanceOpen((prev) => !prev);
+                          setIsLanguageOpen(false);
+                        }}
                       >
                         <span>{theme === "light" ? "Light" : "Dark"}</span>
                         <ChevronDown className="h-3 w-3 text-gray-400" />
@@ -817,7 +810,10 @@ export default function ChatPage() {
                         className={`flex items-center gap-1.5 text-sm ${
                           isDark ? "text-gray-100" : "text-gray-700"
                         }`}
-                        onClick={() => setIsLanguageOpen((prev) => !prev)}
+                        onClick={() => {
+                          setIsLanguageOpen((prev) => !prev);
+                          setIsAppearanceOpen(false);
+                        }}
                       >
                         <span>
                           {language === "auto"
