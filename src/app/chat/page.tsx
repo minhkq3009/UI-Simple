@@ -1,7 +1,9 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Image from "next/image";
+import { useTranslation } from "react-i18next";
+import "@/lib/i18n";
 import {
   Plus,
   MessageSquare,
@@ -32,8 +34,10 @@ type ChatMessage = {
 };
 
 type Theme = "light" | "dark";
+type LanguageOption = "auto" | "en" | "vi" | "ja";
 
 export default function ChatPage() {
+  const { t, i18n } = useTranslation();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -43,6 +47,8 @@ export default function ChatPage() {
   const [counter, setCounter] = useState(1);
   const [theme, setTheme] = useState<Theme>("light");
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
+  const [language, setLanguage] = useState<LanguageOption>("auto");
+  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -77,6 +83,38 @@ export default function ChatPage() {
   };
 
   const isDark = theme === "dark";
+
+  // Đọc language + trạng thái mở Settings sau khi reload
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const storedLang = window.localStorage.getItem("chat:language");
+    if (storedLang && ["en", "vi", "ja"].includes(storedLang)) {
+      i18n.changeLanguage(storedLang);
+      const mapped: Record<string, LanguageOption> = {
+        en: "en",
+        vi: "vi",
+        ja: "ja",
+      };
+      setLanguage(mapped[storedLang]);
+    }
+
+    const reopen = window.localStorage.getItem("chat:openSettingsAfterReload");
+    if (reopen === "1") {
+      setIsSettingsOpen(true);
+      window.localStorage.removeItem("chat:openSettingsAfterReload");
+    }
+  }, [i18n]);
+
+  const handleLanguageChange = (opt: LanguageOption, lng: string) => {
+    setLanguage(opt);
+    i18n.changeLanguage(lng);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("chat:language", lng);
+      window.localStorage.setItem("chat:openSettingsAfterReload", "1");
+      window.location.reload();
+    }
+  };
 
   return (
     <div
@@ -196,7 +234,7 @@ export default function ChatPage() {
             >
               <Plus className="h-4 w-4" />
             </span>
-            {!isSidebarCollapsed && <span>New chat</span>}
+            {!isSidebarCollapsed && <span>{t("sidebar.newChat")}</span>}
           </button>
         </div>
 
@@ -220,7 +258,7 @@ export default function ChatPage() {
             >
               <Search className="h-4 w-4" />
             </span>
-            {!isSidebarCollapsed && <span>Search chats</span>}
+            {!isSidebarCollapsed && <span>{t("sidebar.searchChats")}</span>}
           </button>
           <button
             className={`group flex w-full items-center gap-2 rounded-full px-2 py-2 ${
@@ -236,7 +274,7 @@ export default function ChatPage() {
             >
               <ImageIcon className="h-4 w-4" />
             </span>
-            {!isSidebarCollapsed && <span>Images</span>}
+            {!isSidebarCollapsed && <span>{t("sidebar.images")}</span>}
           </button>
           <button
             className={`group flex w-full items-center gap-2 rounded-full px-2 py-2 ${
@@ -252,7 +290,7 @@ export default function ChatPage() {
             >
               <AppWindow className="h-4 w-4" />
             </span>
-            {!isSidebarCollapsed && <span>Apps</span>}
+            {!isSidebarCollapsed && <span>{t("sidebar.apps")}</span>}
           </button>
           <button
             className={`group flex w-full items-center gap-2 rounded-full px-2 py-2 ${
@@ -268,7 +306,7 @@ export default function ChatPage() {
             >
               <FolderKanban className="h-4 w-4" />
             </span>
-            {!isSidebarCollapsed && <span>Projects</span>}
+            {!isSidebarCollapsed && <span>{t("sidebar.projects")}</span>}
           </button>
         </nav>
 
@@ -285,7 +323,7 @@ export default function ChatPage() {
                   isDark ? "text-gray-400" : "text-gray-500"
                 }`}
               >
-                Your chats
+                {t("sidebar.yourChats")}
               </div>
               <div className="mt-2 space-y-1 px-1">
                 <button
@@ -461,11 +499,9 @@ export default function ChatPage() {
                     isDark ? "text-gray-50" : "text-gray-900"
                   }`}
                 >
-                  Where should we begin?
+                  {t("main.title")}
                 </h1>
-                <p className="text-sm text-gray-500">
-                  Hãy nhập câu hỏi đầu tiên để bắt đầu cuộc trò chuyện demo.
-                </p>
+                <p className="text-sm text-gray-500">{t("main.subtitle")}</p>
               </div>
             )}
 
@@ -534,7 +570,7 @@ export default function ChatPage() {
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask anything"
+                  placeholder={t("main.placeholder")}
                   className={`flex-1 border-none bg-transparent text-sm placeholder:text-gray-400 focus:outline-none focus:ring-0 ${
                     isDark ? "text-gray-100" : "text-gray-900"
                   }`}
@@ -552,7 +588,7 @@ export default function ChatPage() {
               </div>
             </div>
             <p className="mt-2 text-center text-[11px] text-gray-400">
-              Chat demo – phản hồi chỉ là fakedata, chưa nối API thật.
+              {t("main.footerNote")}
             </p>
           </div>
         </form>
@@ -698,7 +734,7 @@ export default function ChatPage() {
                       isDark ? "border-gray-700" : "border-gray-100"
                     }`}
                   >
-                    <span className="text-sm">Appearance</span>
+                    <span className="text-sm">{t("settings.appearance")}</span>
                     <div className="relative">
                       <button
                         type="button"
@@ -755,7 +791,7 @@ export default function ChatPage() {
                       isDark ? "border-gray-700" : "border-gray-100"
                     }`}
                   >
-                    <span className="text-sm">Accent color</span>
+                    <span className="text-sm">{t("settings.accentColor")}</span>
                     <button
                       type="button"
                       className={`flex items-center gap-2 text-sm ${
@@ -763,7 +799,7 @@ export default function ChatPage() {
                       }`}
                     >
                       <span className="h-2.5 w-2.5 rounded-full bg-gray-400" />
-                      <span>Default</span>
+                      <span>{t("settings.defaultAccent")}</span>
                       <ChevronDown className="h-3 w-3 text-gray-400" />
                     </button>
                   </div>
@@ -775,15 +811,84 @@ export default function ChatPage() {
                     }`}
                   >
                     <span className="text-sm">Language</span>
-                    <button
-                      type="button"
-                      className={`flex items-center gap-1.5 text-sm ${
-                        isDark ? "text-gray-100" : "text-gray-700"
-                      }`}
-                    >
-                      <span>Auto-detect</span>
-                      <ChevronDown className="h-3 w-3 text-gray-400" />
-                    </button>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        className={`flex items-center gap-1.5 text-sm ${
+                          isDark ? "text-gray-100" : "text-gray-700"
+                        }`}
+                        onClick={() => setIsLanguageOpen((prev) => !prev)}
+                      >
+                        <span>
+                          {language === "auto"
+                            ? t("settings.autoDetect")
+                            : language === "en"
+                              ? "English"
+                              : language === "vi"
+                                ? "Tiếng Việt"
+                                : "日本語"}
+                        </span>
+                        <ChevronDown className="h-3 w-3 text-gray-400" />
+                      </button>
+                      {isLanguageOpen && (
+                        <div
+                          className={`absolute right-0 top-7 z-40 w-44 rounded-2xl border py-1 shadow-lg ${
+                            isDark
+                              ? "border-gray-700 bg-[#202123] text-gray-100"
+                              : "border-gray-200 bg-white text-gray-900"
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between px-3 py-1.5 text-left text-sm hover:bg-gray-50/10"
+                            onClick={() => {
+                              handleLanguageChange("auto", "en");
+                            }}
+                          >
+                            <span>{t("settings.autoDetect")}</span>
+                            {language === "auto" && (
+                              <Check className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between px-3 py-1.5 text-left text-sm hover:bg-gray-50/10"
+                            onClick={() => {
+                              handleLanguageChange("en", "en");
+                            }}
+                          >
+                            <span>English</span>
+                            {language === "en" && (
+                              <Check className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between px-3 py-1.5 text-left text-sm hover:bg-gray-50/10"
+                            onClick={() => {
+                              handleLanguageChange("vi", "vi");
+                            }}
+                          >
+                            <span>Tiếng Việt</span>
+                            {language === "vi" && (
+                              <Check className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between px-3 py-1.5 text-left text-sm hover:bg-gray-50/10"
+                            onClick={() => {
+                              handleLanguageChange("ja", "ja");
+                            }}
+                          >
+                            <span>日本語</span>
+                            {language === "ja" && (
+                              <Check className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Spoken language */}
@@ -793,7 +898,9 @@ export default function ChatPage() {
                     }`}
                   >
                     <div className="mb-1 flex items-center justify-between">
-                      <span className="text-sm">Spoken language</span>
+                      <span className="text-sm">
+                        {t("settings.spokenLanguage")}
+                      </span>
                       <button
                         type="button"
                         className={`flex items-center gap-1.5 text-sm ${
@@ -805,9 +912,7 @@ export default function ChatPage() {
                       </button>
                     </div>
                     <p className="text-xs text-gray-500">
-                      For best results, select the language you mainly speak. If
-                      it&apos;s not listed, it may still be supported via
-                      auto-detection.
+                      {t("settings.spokenLanguageHelp")}
                     </p>
                   </div>
 
