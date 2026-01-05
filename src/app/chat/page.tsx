@@ -1,9 +1,11 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useTranslation } from "react-i18next";
 import "@/lib/i18n";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   Plus,
   MessageSquare,
@@ -25,12 +27,20 @@ import {
   User,
   ChevronDown,
   Check,
+  MoreHorizontal,
+  Trash2,
 } from "lucide-react";
 
 type ChatMessage = {
   id: number;
   role: "user" | "assistant";
   content: string;
+};
+
+type ChatSession = {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
 };
 
 type Theme = "light" | "dark";
@@ -41,7 +51,8 @@ export default function ChatPage() {
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [counter, setCounter] = useState(1);
@@ -49,11 +60,33 @@ export default function ChatPage() {
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   const [language, setLanguage] = useState<LanguageOption>("auto");
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const [openSessionMenuId, setOpenSessionMenuId] = useState<string | null>(
+    null,
+  );
+  const [confirmDeleteSession, setConfirmDeleteSession] =
+    useState<ChatSession | null>(null);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const trimmed = input.trim();
     if (!trimmed || isThinking) return;
+
+    // Tìm session hiện tại (nếu đã có)
+    const existingSession =
+      activeSessionId != null
+        ? sessions.find((session) => session.id === activeSessionId) ?? null
+        : null;
+
+    let sessionId = activeSessionId;
+    if (!sessionId || !existingSession) {
+      sessionId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? (crypto as any).randomUUID()
+          : `${Date.now()}`;
+    }
+
+    const currentSessionId = sessionId;
 
     const userMessage: ChatMessage = {
       id: counter,
@@ -61,28 +94,149 @@ export default function ChatPage() {
       content: trimmed,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    // Session được xem là "mới" nếu chưa tồn tại,
+    // hoặc tồn tại nhưng chưa có tin nhắn nào (tạo từ nút New chat)
+    const isBrandNewSession =
+      !existingSession || existingSession.messages.length === 0;
+
+    // Cập nhật session với tin nhắn user
+    setSessions((prev) => {
+      const index = prev.findIndex((s) => s.id === currentSessionId);
+
+      if (index === -1) {
+        const newSession: ChatSession = {
+          id: currentSessionId!,
+          title: t("sidebar.newChat"),
+          messages: [userMessage],
+        };
+        return [newSession, ...prev];
+      }
+
+      const session = prev[index];
+      const updated: ChatSession = {
+        ...session,
+        messages: [...session.messages, userMessage],
+      };
+
+      const next = [...prev];
+      next[index] = updated;
+      return next;
+    });
+
+    setActiveSessionId(currentSessionId);
     setCounter((prev) => prev + 1);
     setInput("");
     setIsThinking(true);
 
-    const replyText =
-      "Đây là câu trả lời demo. Bạn có thể nối API thật sau này, nhưng hiện tại UI chỉ đang fake dữ liệu để mô phỏng chatbot.";
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: trimmed }),
+      });
 
-    const reply: ChatMessage = {
-      id: counter + 1,
-      role: "assistant",
-      content: replyText,
-    };
+      const data = await res.json();
 
-    setTimeout(() => {
-      setMessages((prev) => [...prev, reply]);
+      if (!res.ok) {
+        const errorMessage: string =
+          typeof data?.error === "string" && data.error.trim().length > 0
+            ? data.error
+            : `Có lỗi khi gọi LLM (mã ${res.status}).`;
+
+        const errorReply: ChatMessage = {
+          id: counter + 1,
+          role: "assistant",
+          content: errorMessage,
+        };
+
+        setSessions((prev) => {
+          const index = prev.findIndex((s) => s.id === currentSessionId);
+          if (index === -1) return prev;
+
+          const session = prev[index];
+          const updated: ChatSession = {
+            ...session,
+            messages: [...session.messages, errorReply],
+          };
+
+          const next = [...prev];
+          next[index] = updated;
+          return next;
+        });
+
+        setCounter((prev) => prev + 1);
+        return;
+      }
+
+      const replyText: string =
+        typeof data.reply === "string" && data.reply.trim().length > 0
+          ? data.reply
+          : "LLM không trả về nội dung hợp lệ.";
+
+      const reply: ChatMessage = {
+        id: counter + 1,
+        role: "assistant",
+        content: replyText,
+      };
+
+      setSessions((prev) => {
+        const index = prev.findIndex((s) => s.id === currentSessionId);
+        if (index === -1) return prev;
+
+        const session = prev[index];
+        const updated: ChatSession = {
+          ...session,
+          messages: [...session.messages, reply],
+        };
+
+        const next = [...prev];
+        next[index] = updated;
+        return next;
+      });
+
+      if (isBrandNewSession && currentSessionId) {
+        void generateChatTitle(currentSessionId, trimmed, replyText);
+      }
+
       setCounter((prev) => prev + 1);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      const errorReply: ChatMessage = {
+        id: counter + 1,
+        role: "assistant",
+        content:
+          "Có lỗi khi gọi LLM. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.",
+      };
+
+      setSessions((prev) => {
+        const index = prev.findIndex((s) => s.id === currentSessionId);
+        if (index === -1) return prev;
+
+        const session = prev[index];
+        const updated: ChatSession = {
+          ...session,
+          messages: [...session.messages, errorReply],
+        };
+
+        const next = [...prev];
+        next[index] = updated;
+        return next;
+      });
+
+      setCounter((prev) => prev + 1);
+    } finally {
       setIsThinking(false);
-    }, 700);
+    }
   };
 
   const isDark = theme === "dark";
+  const activeSession =
+    (activeSessionId &&
+      sessions.find((session) => session.id === activeSessionId)) ||
+    null;
+  const messages = activeSession?.messages ?? [];
 
   // Common CSS for sidebar main buttons (New chat, Search, Images, Apps, Projects)
   const sidebarMainButtonClass = `group flex w-full items-center gap-2 rounded-full px-4 py-2 text-sm ${
@@ -129,13 +283,113 @@ export default function ChatPage() {
     setIsLanguageOpen(false);
   };
 
+  // Tự động scroll tới tin nhắn mới nhất
+  useEffect(() => {
+    if (!messagesEndRef.current) return;
+    messagesEndRef.current.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
+  }, [messages.length, isThinking, activeSessionId]);
+
+  // Load chat sessions từ localStorage
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem("chat:sessions");
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as ChatSession[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        setSessions(parsed);
+        setActiveSessionId(parsed[0].id);
+      }
+    } catch (error) {
+      console.error("Failed to load chat sessions from localStorage", error);
+    }
+  }, []);
+
+  // Lưu chat sessions vào localStorage mỗi khi thay đổi
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem("chat:sessions", JSON.stringify(sessions));
+    } catch (error) {
+      console.error("Failed to save chat sessions to localStorage", error);
+    }
+  }, [sessions]);
+
+  const generateChatTitle = async (
+    sessionId: string,
+    userText: string,
+    assistantText: string,
+  ) => {
+    try {
+      const res = await fetch("/api/chat/title", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ user: userText, assistant: assistantText }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        console.error("Failed to generate title:", data);
+        return;
+      }
+
+      const title =
+        typeof data?.title === "string" && data.title.trim().length > 0
+          ? data.title.trim()
+          : null;
+
+      if (!title) return;
+
+      setSessions((prev) => {
+        const index = prev.findIndex((s) => s.id === sessionId);
+        if (index === -1) return prev;
+
+        const session = prev[index];
+        const updated: ChatSession = {
+          ...session,
+          title,
+        };
+
+        const next = [...prev];
+        next[index] = updated;
+        return next;
+      });
+    } catch (error) {
+      console.error("Error calling /api/chat/title:", error);
+    }
+  };
+
+  const handleNewChat = () => {
+    const newId =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? (crypto as any).randomUUID()
+        : `${Date.now()}`;
+
+    const newSession: ChatSession = {
+      id: newId,
+      title: t("sidebar.newChat"),
+      messages: [],
+    };
+
+    setSessions((prev) => [newSession, ...prev]);
+    setActiveSessionId(newId);
+    setInput("");
+    setIsThinking(false);
+  };
+
   return (
     <div
-      className={`flex min-h-screen transition-colors ${
+      className={`flex h-screen transition-colors ${
         isDark
           ? "bg-[#050509] text-gray-100"
           : "bg-linear-to-b from-[#f7f7f8] to-[#e5e7eb] text-gray-900"
       }`}
+      onClick={() => setOpenSessionMenuId(null)}
     >
       {/* Sidebar trái giống ChatGPT 4.x */}
       <aside
@@ -236,6 +490,7 @@ export default function ChatPage() {
             <button
               type="button"
               className={sidebarMainButtonClass}
+              onClick={handleNewChat}
             >
               <span
                 className={`flex items-center justify-center ${
@@ -315,49 +570,101 @@ export default function ChatPage() {
               >
                 {t("sidebar.yourChats")}
               </div>
-              <div className="mt-2 space-y-1 px-1">
-                <button
-                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left ${
-                    isDark
-                      ? "text-gray-100 hover:bg-[#2a2b32]"
-                      : "text-gray-800 hover:bg-gray-100"
-                  }`}
-                >
-                  <MessageSquare
-                    className={`h-4 w-4 ${
-                      isDark ? "text-gray-400" : "text-gray-500"
+              <div
+                className="mt-2 space-y-1 px-1"
+                onClick={() => setOpenSessionMenuId(null)}
+              >
+                {sessions.length === 0 ? (
+                  <p
+                    className={`px-3 py-2 text-xs ${
+                      isDark ? "text-gray-500" : "text-gray-400"
                     }`}
-                  />
-                  <span className="truncate">Giới thiệu về Nuxt</span>
-                </button>
-                <button
-                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left ${
-                    isDark
+                  >
+                    Chưa có cuộc trò chuyện nào.
+                  </p>
+                ) : (
+                  sessions.map((session) => {
+                    const isActive = session.id === activeSessionId;
+                    const baseClass = isDark
                       ? "text-gray-100 hover:bg-[#2a2b32]"
-                      : "text-gray-800 hover:bg-gray-100"
-                  }`}
-                >
-                  <MessageSquare
-                    className={`h-4 w-4 ${
-                      isDark ? "text-gray-400" : "text-gray-500"
-                    }`}
-                  />
-                  <span className="truncate">Giải thích mã Node.js</span>
-                </button>
-                <button
-                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left ${
-                    isDark
-                      ? "text-gray-100 hover:bg-[#2a2b32]"
-                      : "text-gray-800 hover:bg-gray-100"
-                  }`}
-                >
-                  <MessageSquare
-                    className={`h-4 w-4 ${
-                      isDark ? "text-gray-400" : "text-gray-500"
-                    }`}
-                  />
-                  <span className="truncate">RAG là gì</span>
-                </button>
+                      : "text-gray-800 hover:bg-gray-100";
+                    const activeClass = isDark
+                      ? "bg-[#2a2b32] text-gray-100"
+                      : "bg-gray-100 text-gray-900";
+
+                    return (
+                      <div
+                        key={session.id}
+                        className="group relative flex items-center"
+                      >
+                        <button
+                          type="button"
+                          className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left pr-8 ${
+                            isActive ? activeClass : baseClass
+                          }`}
+                          onClick={() => {
+                            setActiveSessionId(session.id);
+                            setOpenSessionMenuId(null);
+                          }}
+                        >
+                          <MessageSquare
+                            className={`h-4 w-4 ${
+                              isDark ? "text-gray-400" : "text-gray-500"
+                            }`}
+                          />
+                          <span className="truncate">
+                            {session.title || "Cuộc trò chuyện mới"}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          className={`absolute right-1 flex h-6 w-6 items-center justify-center rounded-md text-gray-400 hover:text-gray-600 ${
+                            isDark
+                              ? "hover:bg-[#2a2b32]"
+                              : "hover:bg-gray-100"
+                          } opacity-0 group-hover:opacity-100`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenSessionMenuId((prev) =>
+                              prev === session.id ? null : session.id,
+                            );
+                          }}
+                          aria-label="Chat actions"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+
+                        {openSessionMenuId === session.id && (
+                          <div
+                            className={`absolute right-0 top-9 z-20 w-40 rounded-xl border py-1 text-xs shadow-lg ${
+                              isDark
+                                ? "border-gray-700 bg-[#202123] text-gray-100"
+                                : "border-gray-200 bg-white text-gray-800"
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              className={`flex w-full items-center gap-2 px-3 py-2 text-left ${
+                                isDark
+                                  ? "hover:bg-[#2a2b32] text-red-400"
+                                  : "hover:bg-gray-100 text-red-600"
+                              }`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setConfirmDeleteSession(session);
+                                setOpenSessionMenuId(null);
+                              }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              <span>Xóa</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </>
           )}
@@ -478,7 +785,7 @@ export default function ChatPage() {
       </aside>
 
       {/* Khu vực chat chính giống màn hình new chat / conversation */}
-      <main className="flex min-h-screen flex-1 flex-col">
+      <main className="flex flex-1 flex-col">
         {/* Messages area */}
         <div className="flex-1 overflow-y-auto px-4 py-6">
           <div className="mx-auto w-full max-w-2xl space-y-4">
@@ -511,7 +818,45 @@ export default function ChatPage() {
                         : "bg-white text-gray-900 shadow-sm"
                   }`}
                 >
-                  {msg.content}
+                  {msg.role === "assistant" ? (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p: ({ node, ...props }) => (
+                          <p className="mb-2 last:mb-0" {...props} />
+                        ),
+                        ul: ({ node, ...props }) => (
+                          <ul
+                            className="mb-2 list-disc pl-5 last:mb-0"
+                            {...props}
+                          />
+                        ),
+                        ol: ({ node, ...props }) => (
+                          <ol
+                            className="mb-2 list-decimal pl-5 last:mb-0"
+                            {...props}
+                          />
+                        ),
+                        li: ({ node, ...props }) => <li {...props} />,
+                        code: ({ node, inline, ...props }: any) =>
+                          inline ? (
+                            <code
+                              className="rounded bg-black/10 px-1 py-0.5 text-xs"
+                              {...props}
+                            />
+                          ) : (
+                            <code
+                              className="block whitespace-pre-wrap rounded-md bg-black/80 px-3 py-2 text-xs text-white"
+                              {...props}
+                            />
+                          ),
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  ) : (
+                    msg.content
+                  )}
                 </div>
               </div>
             ))}
@@ -529,6 +874,8 @@ export default function ChatPage() {
                 </div>
               </div>
             )}
+
+            <div ref={messagesEndRef} />
           </div>
         </div>
 
@@ -583,6 +930,81 @@ export default function ChatPage() {
           </div>
         </form>
       </main>
+
+      {/* Modal xác nhận xóa đoạn chat */}
+      {confirmDeleteSession && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setConfirmDeleteSession(null)}
+        >
+          <div
+            className={`w-full max-w-md rounded-2xl border shadow-xl ${
+              isDark
+                ? "border-gray-700 bg-[#202123] text-gray-100"
+                : "border-gray-200 bg-white text-gray-900"
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 pt-4 pb-3">
+              <h2
+                className={`text-base font-semibold ${
+                  isDark ? "text-gray-100" : "text-gray-900"
+                }`}
+              >
+                Xóa đoạn chat?
+              </h2>
+              <p
+                className={`mt-2 text-sm ${
+                  isDark ? "text-gray-200" : "text-gray-700"
+                }`}
+              >
+                Hành động này sẽ xóa{" "}
+                <span className="font-semibold">
+                  {confirmDeleteSession.title || "New chat"}
+                </span>
+                .
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                Bạn sẽ không thể hoàn tác sau khi xóa.
+              </p>
+            </div>
+            <div
+              className={`flex justify-end gap-2 border-t px-4 py-3 ${
+                isDark ? "border-gray-700" : "border-gray-100"
+              }`}
+            >
+              <button
+                type="button"
+                className={`rounded-full px-4 py-1.5 text-sm ${
+                  isDark
+                    ? "bg-[#2a2b32] text-gray-100 hover:bg-[#343541]"
+                    : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                }`}
+                onClick={() => setConfirmDeleteSession(null)}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                className="rounded-full bg-red-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-red-700"
+                onClick={() => {
+                  const idToDelete = confirmDeleteSession.id;
+                  setSessions((prev) => {
+                    const filtered = prev.filter((s) => s.id !== idToDelete);
+                    if (activeSessionId === idToDelete) {
+                      setActiveSessionId(filtered[0]?.id ?? null);
+                    }
+                    return filtered;
+                  });
+                  setConfirmDeleteSession(null);
+                }}
+              >
+                Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Settings modal với blur background */}
       {isSettingsOpen && (
