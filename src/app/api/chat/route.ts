@@ -10,17 +10,73 @@ if (!apiKey) {
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 
+// Đơn giản hoá: chuẩn hoá một số teencode / viết tắt phổ biến của tiếng Việt
+function normalizeVietnameseSlang(input: string): string {
+  let text = input;
+
+  const rules: [RegExp, string][] = [
+    [/\bm\b/gi, "mày"],
+    [/\bt\b/gi, "tớ"],
+    [/\bmk\b/gi, "mày"],
+    [/\btao\b/gi, "tao"],
+    [/\bko\b/gi, "không"],
+    [/\bk\b/gi, "không"],
+    [/\bkhum\b/gi, "không"],
+    [/\bkhum\b/gi, "không"],
+    [/\bđc\b/gi, "được"],
+    [/\bdc\b/gi, "được"],
+    [/\bj\b/gi, "gì"],
+    [/\bvs\b/gi, "với"],
+    [/\bhok\b/gi, "không"],
+  ];
+
+  for (const [pattern, replacement] of rules) {
+    text = text.replace(pattern, replacement);
+  }
+
+  return text;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const message = body?.message as string | undefined;
+    const historyInput = Array.isArray(body?.history)
+      ? (body.history as Array<{ role?: string; content?: unknown }>)
+      : null;
 
-    if (!message || typeof message !== "string") {
+    const historyMessages =
+      historyInput
+        ?.map((m) => ({
+          role: m.role,
+          content: m.content,
+        }))
+        .filter(
+          (m): m is { role: "user" | "assistant"; content: string } =>
+            (m.role === "user" || m.role === "assistant") &&
+            typeof m.content === "string" &&
+            m.content.trim().length > 0,
+        ) ?? [];
+
+    if (
+      (!message || typeof message !== "string") &&
+      historyMessages.length === 0
+    ) {
       return NextResponse.json(
-        { error: "Invalid or missing 'message' in request body" },
+        { error: "Missing 'message' or 'history' in request body" },
         { status: 400 },
       );
     }
+
+    const normalizedHistory = historyMessages.map((m) => ({
+      role: m.role,
+      content: m.role === "user" ? normalizeVietnameseSlang(m.content) : m.content,
+    }));
+
+    const normalizedMessage =
+      message && typeof message === "string"
+        ? normalizeVietnameseSlang(message)
+        : message;
 
     const groqRes = await fetch(GROQ_URL, {
       method: "POST",
@@ -34,12 +90,16 @@ export async function POST(req: NextRequest) {
           {
             role: "system",
             content:
-              "You are a helpful assistant for a demo chat UI. Format your responses using Markdown when helpful (headings using ##, bullet lists, and fenced code blocks for code). Keep answers concise.",
+              "You are a helpful assistant for a Vietnamese chat UI. Users often write in informal Vietnamese chat slang and abbreviations (for example: 'm' = 'mày', 't' = 'tao/tớ', 'k'/'ko' = 'không', 'dc'/'đc' = 'được', 'j' = 'gì'). Always interpret these abbreviations correctly based on context. You see the full conversation history, so use previous turns to resolve references (like 'các hãng xe kia'). Format your responses using Markdown when helpful (headings using ##, bullet lists, and fenced code blocks for code). Keep answers concise and in the same language style as the user (usually Vietnamese).",
           },
-          {
-            role: "user",
-            content: message,
-          },
+          ...(normalizedHistory.length > 0
+            ? normalizedHistory
+            : [
+                {
+                  role: "user" as const,
+                  content: normalizedMessage as string,
+                },
+              ]),
         ],
       }),
     });

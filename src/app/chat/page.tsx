@@ -55,6 +55,7 @@ export default function ChatPage() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [counter, setCounter] = useState(1);
   const [theme, setTheme] = useState<Theme>("light");
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
@@ -127,6 +128,18 @@ export default function ChatPage() {
     setCounter((prev) => prev + 1);
     setInput("");
     setIsThinking(true);
+    setIsStreaming(false);
+
+    // Chuẩn bị history gửi lên server để LLM hiểu ngữ cảnh
+    const historyForApi: ChatMessage[] = [
+      ...(existingSession?.messages ?? []),
+      userMessage,
+    ];
+
+    // Chỉ gửi một số tin nhắn gần nhất để tránh quá dài
+    const historyPayload = historyForApi
+      .slice(-12)
+      .map(({ role, content }) => ({ role, content }));
 
     try {
       const res = await fetch("/api/chat", {
@@ -134,7 +147,7 @@ export default function ChatPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message: trimmed }),
+        body: JSON.stringify({ message: trimmed, history: historyPayload }),
       });
 
       const data = await res.json();
@@ -167,6 +180,8 @@ export default function ChatPage() {
         });
 
         setCounter((prev) => prev + 1);
+        setIsThinking(false);
+        setIsStreaming(false);
         return;
       }
 
@@ -175,12 +190,9 @@ export default function ChatPage() {
           ? data.reply
           : "LLM không trả về nội dung hợp lệ.";
 
-      const reply: ChatMessage = {
-        id: counter + 1,
-        role: "assistant",
-        content: replyText,
-      };
+      const replyId = counter + 1;
 
+      // Thêm message rỗng để chuẩn bị hiệu ứng typing
       setSessions((prev) => {
         const index = prev.findIndex((s) => s.id === currentSessionId);
         if (index === -1) return prev;
@@ -188,7 +200,14 @@ export default function ChatPage() {
         const session = prev[index];
         const updated: ChatSession = {
           ...session,
-          messages: [...session.messages, reply],
+          messages: [
+            ...session.messages,
+            {
+              id: replyId,
+              role: "assistant",
+              content: "",
+            },
+          ],
         };
 
         const next = [...prev];
@@ -196,11 +215,55 @@ export default function ChatPage() {
         return next;
       });
 
-      if (isBrandNewSession && currentSessionId) {
-        void generateChatTitle(currentSessionId, trimmed, replyText);
-      }
-
       setCounter((prev) => prev + 1);
+      setIsThinking(false);
+      setIsStreaming(true);
+
+      // Hiệu ứng typing từng đoạn giống ChatGPT
+      let currentIndex = 0;
+      const totalLength = replyText.length;
+      const chunkSize = 8; // số ký tự mỗi bước
+      const delay = 20; // ms giữa các bước
+
+      const typeNextChunk = () => {
+        currentIndex = Math.min(currentIndex + chunkSize, totalLength);
+        const nextText = replyText.slice(0, currentIndex);
+
+        setSessions((prev) => {
+          const index = prev.findIndex((s) => s.id === currentSessionId);
+          if (index === -1) return prev;
+
+          const session = prev[index];
+          const updatedMessages = session.messages.map((msg) =>
+            msg.id === replyId ? { ...msg, content: nextText } : msg,
+          );
+
+          const updated: ChatSession = {
+            ...session,
+            messages: updatedMessages,
+          };
+
+          const next = [...prev];
+          next[index] = updated;
+          return next;
+        });
+
+        if (currentIndex < totalLength) {
+          window.setTimeout(typeNextChunk, delay);
+        } else {
+          if (isBrandNewSession && currentSessionId) {
+            void generateChatTitle(currentSessionId, trimmed, replyText);
+          }
+          setIsStreaming(false);
+        }
+      };
+
+      if (totalLength === 0) {
+        // Không có text để gõ, kết thúc luôn
+        setIsStreaming(false);
+      } else {
+        window.setTimeout(typeNextChunk, delay);
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       const errorReply: ChatMessage = {
@@ -226,7 +289,6 @@ export default function ChatPage() {
       });
 
       setCounter((prev) => prev + 1);
-    } finally {
       setIsThinking(false);
     }
   };
@@ -290,7 +352,7 @@ export default function ChatPage() {
       behavior: "smooth",
       block: "end",
     });
-  }, [messages.length, isThinking, activeSessionId]);
+  }, [messages.length, isThinking, isStreaming, activeSessionId]);
 
   // Load chat sessions từ localStorage
   useEffect(() => {
@@ -302,6 +364,19 @@ export default function ChatPage() {
       if (Array.isArray(parsed) && parsed.length > 0) {
         setSessions(parsed);
         setActiveSessionId(parsed[0].id);
+
+        // Thiết lập lại counter dựa trên id lớn nhất trong toàn bộ history
+        let maxId = 0;
+        for (const session of parsed) {
+          for (const msg of session.messages) {
+            if (typeof msg.id === "number" && msg.id > maxId) {
+              maxId = msg.id;
+            }
+          }
+        }
+        if (maxId > 0) {
+          setCounter(maxId + 1);
+        }
       }
     } catch (error) {
       console.error("Failed to load chat sessions from localStorage", error);
@@ -861,7 +936,7 @@ export default function ChatPage() {
               </div>
             ))}
 
-            {isThinking && (
+            {isThinking && !isStreaming && (
               <div className="flex justify-start">
                 <div
                   className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
