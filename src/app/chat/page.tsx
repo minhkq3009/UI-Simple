@@ -7,6 +7,7 @@ import "@/lib/i18n";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useSession, signOut, signIn } from "next-auth/react";
+import { LoginModal } from "@/components/LoginModal";
 import {
   Plus,
   MessageSquare,
@@ -545,17 +546,8 @@ export default function ChatPage() {
 
   if (!session) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-black text-white">
-        <div className="mb-4 text-lg font-semibold">
-          Bạn cần đăng nhập bằng Google để dùng trang chat.
-        </div>
-        <button
-          type="button"
-          onClick={() => signIn("google", { callbackUrl: "/chat" })}
-          className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black hover:bg-gray-200"
-        >
-          Đăng nhập với Google
-        </button>
+      <div className="relative flex min-h-screen items-center justify-center bg-black text-white">
+        <LoginModal open={true} onClose={() => {}} showCloseButton={false} />
       </div>
     );
   }

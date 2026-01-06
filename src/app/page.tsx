@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Image from "next/image";
-import { signIn } from "next-auth/react";
+import { LoginModal } from "@/components/LoginModal";
 
 type LandingMessage = {
   id: number;
@@ -15,6 +15,7 @@ export default function Home() {
   const [messages, setMessages] = useState<LandingMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
   const [counter, setCounter] = useState(1);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -112,14 +113,14 @@ export default function Home() {
         <div className="flex items-center gap-3 text-sm">
           <button
             type="button"
-            onClick={() => signIn("google", { callbackUrl: "/chat" })}
+            onClick={() => setIsLoginOpen(true)}
             className="rounded-full bg-black px-3.5 py-1.5 font-medium text-white hover:bg-neutral-800"
           >
             Log in
           </button>
           <button
             type="button"
-            onClick={() => signIn("google", { callbackUrl: "/chat" })}
+            onClick={() => setIsLoginOpen(true)}
             className="rounded-full border border-gray-300 px-3 py-1.5 text-gray-800 hover:bg-gray-50"
           >
             Sign up for free
@@ -211,6 +212,10 @@ export default function Home() {
           </form>
         </div>
       </main>
+      <LoginModal
+        open={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+      />
     </div>
   );
 }
