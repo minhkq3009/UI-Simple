@@ -22,6 +22,11 @@ const resources = {
         general: "General",
         appearance: "Appearance",
         accentColor: "Accent color",
+        accentBlue: "Blue",
+        accentGreen: "Green",
+        accentYellow: "Yellow",
+        accentPink: "Pink",
+        accentOrange: "Orange",
         language: "Language",
         spokenLanguage: "Spoken language",
         spokenLanguageHelp:
@@ -55,6 +60,11 @@ const resources = {
         general: "Cài đặt chung",
         appearance: "Giao diện",
         accentColor: "Màu nhấn",
+        accentBlue: "Xanh dương",
+        accentGreen: "Xanh lá",
+        accentYellow: "Vàng",
+        accentPink: "Hồng",
+        accentOrange: "Cam",
         language: "Ngôn ngữ",
         spokenLanguage: "Ngôn ngữ nói",
         spokenLanguageHelp:
@@ -88,6 +98,11 @@ const resources = {
         general: "一般",
         appearance: "表示",
         accentColor: "アクセントカラー",
+        accentBlue: "ブルー",
+        accentGreen: "グリーン",
+        accentYellow: "イエロー",
+        accentPink: "ピンク",
+        accentOrange: "オレンジ",
         language: "言語",
         spokenLanguage: "話す言語",
         spokenLanguageHelp:
@@ -110,6 +125,18 @@ if (!i18n.isInitialized) {
     interpolation: {
       escapeValue: false,
     },
+  });
+} else {
+  // Dev / HMR: merge latest resources to tránh bị hiển thị raw key (settings.accentBlue)
+  Object.entries(resources).forEach(([lng, res]) => {
+    i18n.addResourceBundle(
+      lng,
+      "translation",
+      // @ts-ignore – shape phù hợp với i18next
+      res.translation,
+      true,
+      true,
+    );
   });
 }
 

@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import "@/lib/i18n";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useSession, signOut, signIn } from "next-auth/react";
 import {
   Plus,
   MessageSquare,
@@ -44,6 +45,7 @@ type ChatSession = {
 };
 
 type Theme = "light" | "dark";
+type AccentColor = "default" | "blue" | "green" | "yellow" | "pink" | "orange";
 type LanguageOption = "auto" | "en" | "vi" | "ja";
 
 export default function ChatPage() {
@@ -58,7 +60,9 @@ export default function ChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [counter, setCounter] = useState(1);
   const [theme, setTheme] = useState<Theme>("light");
+  const [accentColor, setAccentColor] = useState<AccentColor>("default");
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
+  const [isAccentOpen, setIsAccentOpen] = useState(false);
   const [language, setLanguage] = useState<LanguageOption>("auto");
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -67,6 +71,7 @@ export default function ChatPage() {
   );
   const [confirmDeleteSession, setConfirmDeleteSession] =
     useState<ChatSession | null>(null);
+  const { data: session, status } = useSession();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -294,6 +299,56 @@ export default function ChatPage() {
   };
 
   const isDark = theme === "dark";
+
+  // Màu chính (avatar, nút gửi, v.v.) – đậm
+  const accentMainBgClass =
+    accentColor === "blue"
+      ? "bg-sky-500"
+      : accentColor === "green"
+        ? "bg-emerald-500"
+        : accentColor === "yellow"
+          ? "bg-amber-400"
+          : accentColor === "pink"
+            ? "bg-pink-500"
+            : accentColor === "orange"
+              ? "bg-orange-500"
+              : "bg-blue-500";
+
+  // Màu nhạt cho nền bubble user ở theme sáng
+  const accentSoftBgClass =
+    accentColor === "blue"
+      ? "bg-sky-100"
+      : accentColor === "green"
+        ? "bg-emerald-100"
+        : accentColor === "yellow"
+          ? "bg-amber-100"
+          : accentColor === "pink"
+            ? "bg-pink-100"
+            : accentColor === "orange"
+              ? "bg-orange-100"
+              : "bg-white";
+
+  const accentDotClass =
+    accentColor === "blue"
+      ? "bg-sky-500"
+      : accentColor === "green"
+        ? "bg-emerald-500"
+        : accentColor === "yellow"
+          ? "bg-amber-400"
+          : accentColor === "pink"
+            ? "bg-pink-500"
+            : accentColor === "orange"
+              ? "bg-orange-500"
+              : "bg-gray-400";
+
+  const accentLabel: Record<AccentColor, string> = {
+    default: t("settings.defaultAccent"),
+    blue: t("settings.accentBlue"),
+    green: t("settings.accentGreen"),
+    yellow: t("settings.accentYellow"),
+    pink: t("settings.accentPink"),
+    orange: t("settings.accentOrange"),
+  };
   const activeSession =
     (activeSessionId &&
       sessions.find((session) => session.id === activeSessionId)) ||
@@ -312,6 +367,18 @@ export default function ChatPage() {
     if (storedTheme === "light" || storedTheme === "dark") {
       setTheme(storedTheme as Theme);
     }
+
+    const storedAccent = window.localStorage.getItem("chat:accent");
+    if (
+      storedAccent === "default" ||
+      storedAccent === "blue" ||
+      storedAccent === "green" ||
+      storedAccent === "yellow" ||
+      storedAccent === "pink" ||
+      storedAccent === "orange"
+    ) {
+      setAccentColor(storedAccent as AccentColor);
+    }
   }, []);
 
   // Lưu theme mỗi khi thay đổi
@@ -319,6 +386,12 @@ export default function ChatPage() {
     if (typeof window === "undefined") return;
     window.localStorage.setItem("chat:theme", theme);
   }, [theme]);
+
+  // Lưu accent color mỗi khi thay đổi
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("chat:accent", accentColor);
+  }, [accentColor]);
 
   // Đọc language + trạng thái mở Settings sau khi reload
   useEffect(() => {
@@ -393,6 +466,11 @@ export default function ChatPage() {
     }
   }, [sessions]);
 
+  const handleAccentChange = (value: AccentColor) => {
+    setAccentColor(value);
+    setIsAccentOpen(false);
+  };
+
   const generateChatTitle = async (
     sessionId: string,
     userText: string,
@@ -456,6 +534,31 @@ export default function ChatPage() {
     setInput("");
     setIsThinking(false);
   };
+
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black text-white">
+        <span>Loading...</span>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-black text-white">
+        <div className="mb-4 text-lg font-semibold">
+          Bạn cần đăng nhập bằng Google để dùng trang chat.
+        </div>
+        <button
+          type="button"
+          onClick={() => signIn("google", { callbackUrl: "/chat" })}
+          className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black hover:bg-gray-200"
+        >
+          Đăng nhập với Google
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -761,7 +864,9 @@ export default function ChatPage() {
                 }`}
               >
                 <div className="flex items-center gap-3 px-3 py-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-xs font-semibold text-white">
+                  <div
+                    className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold text-white ${accentMainBgClass}`}
+                  >
                     MK
                   </div>
                   {!isSidebarCollapsed && (
@@ -800,6 +905,7 @@ export default function ChatPage() {
                     className={`flex w-full items-center gap-2 px-4 py-2 ${
                       isDark ? "hover:bg-[#2a2b32]" : "hover:bg-gray-50"
                     }`}
+                    type="button"
                   >
                     <HelpCircle className="h-4 w-4 text-gray-500" />
                     <span>Help</span>
@@ -808,6 +914,8 @@ export default function ChatPage() {
                     className={`flex w-full items-center gap-2 px-4 py-2 ${
                       isDark ? "hover:bg-[#2a2b32]" : "hover:bg-gray-50"
                     }`}
+                    type="button"
+                    onClick={() => signOut({ callbackUrl: "/" })}
                   >
                     <LogOut className="h-4 w-4 text-gray-500" />
                     <span>Log out</span>
@@ -822,7 +930,7 @@ export default function ChatPage() {
             <div className="flex justify-center">
               <button
                 type="button"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-xs font-semibold text-white hover:brightness-110"
+                className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold text-white hover:brightness-110 ${accentMainBgClass}`}
                 onClick={() => setIsAccountMenuOpen((prev) => !prev)}
                 aria-label="Account menu"
               >
@@ -839,7 +947,9 @@ export default function ChatPage() {
               onClick={() => setIsAccountMenuOpen((prev) => !prev)}
             >
               <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-500 text-xs font-semibold text-white">
+                <div
+                  className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white ${accentMainBgClass}`}
+                >
                   MK
                 </div>
                 <div className="flex flex-col items-start">
@@ -887,7 +997,9 @@ export default function ChatPage() {
                 <div
                   className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${
                     msg.role === "user"
-                      ? "bg-black text-white"
+                      ? isDark
+                        ? `${accentMainBgClass} text-white`
+                        : `${accentSoftBgClass} text-gray-900`
                       : isDark
                         ? "bg-[#202123] text-gray-50 shadow-sm"
                         : "bg-white text-gray-900 shadow-sm"
@@ -990,9 +1102,7 @@ export default function ChatPage() {
                 <button
                   type="submit"
                   disabled={!input.trim() || isThinking}
-                  className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-white disabled:cursor-not-allowed disabled:bg-gray-500 ${
-                    isDark ? "bg-gray-200 text-black hover:bg-gray-100" : "bg-black hover:bg-neutral-800"
-                  }`}
+                  className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-white disabled:cursor-not-allowed disabled:opacity-50 ${accentMainBgClass} hover:brightness-110`}
                   aria-label="Send message"
                 >
                   <Send className="h-4 w-4" />
@@ -1282,16 +1392,64 @@ export default function ChatPage() {
                     }`}
                   >
                     <span className="text-sm">{t("settings.accentColor")}</span>
-                    <button
-                      type="button"
-                      className={`flex items-center gap-2 text-sm ${
-                        isDark ? "text-gray-100" : "text-gray-700"
-                      }`}
-                    >
-                      <span className="h-2.5 w-2.5 rounded-full bg-gray-400" />
-                      <span>{t("settings.defaultAccent")}</span>
-                      <ChevronDown className="h-3 w-3 text-gray-400" />
-                    </button>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        className={`flex items-center gap-2 text-sm ${
+                          isDark ? "text-gray-100" : "text-gray-700"
+                        }`}
+                        onClick={() => {
+                          setIsAccentOpen((prev) => !prev);
+                          setIsAppearanceOpen(false);
+                          setIsLanguageOpen(false);
+                        }}
+                      >
+                        <span
+                          className={`h-2.5 w-2.5 rounded-full ${accentDotClass}`}
+                        />
+                        <span>{accentLabel[accentColor]}</span>
+                        <ChevronDown className="h-3 w-3 text-gray-400" />
+                      </button>
+                      {isAccentOpen && (
+                        <div
+                          className={`absolute right-0 top-7 z-40 w-44 rounded-2xl border py-1 text-sm shadow-lg ${
+                            isDark
+                              ? "border-gray-700 bg-[#202123] text-gray-100"
+                              : "border-gray-200 bg-white text-gray-900"
+                          }`}
+                        >
+                          {[
+                            { value: "default", dot: "bg-gray-400" },
+                            { value: "blue", dot: "bg-sky-500" },
+                            { value: "green", dot: "bg-emerald-500" },
+                            { value: "yellow", dot: "bg-amber-400" },
+                            { value: "pink", dot: "bg-pink-500" },
+                            { value: "orange", dot: "bg-orange-500" },
+                          ].map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              className="flex w-full items-center justify-between px-3 py-1.5 text-left hover:bg-gray-50/10"
+                              onClick={() =>
+                                handleAccentChange(opt.value as AccentColor)
+                              }
+                            >
+                              <span className="flex items-center gap-2">
+                                <span
+                                  className={`h-2.5 w-2.5 rounded-full ${opt.dot}`}
+                                />
+                                <span>
+                                  {accentLabel[opt.value as AccentColor]}
+                                </span>
+                              </span>
+                              {accentColor === opt.value && (
+                                <Check className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Language */}
