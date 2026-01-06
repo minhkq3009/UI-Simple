@@ -74,6 +74,20 @@ export default function ChatPage() {
     useState<ChatSession | null>(null);
   const { data: session, status } = useSession();
 
+  const displayName =
+    session?.user?.name ||
+    (session?.user?.email
+      ? session.user.email.split("@")[0]
+      : "User");
+
+  const displayInitials =
+    displayName
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("") || "U";
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const trimmed = input.trim();
@@ -859,11 +873,13 @@ export default function ChatPage() {
                   <div
                     className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold text-white ${accentMainBgClass}`}
                   >
-                    MK
+                    {displayInitials}
                   </div>
                   {!isSidebarCollapsed && (
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium">Minh Kim</span>
+                      <span className="text-sm font-medium">
+                        {displayName}
+                      </span>
                       <span className="text-xs text-gray-400">Free</span>
                     </div>
                   )}
@@ -926,7 +942,7 @@ export default function ChatPage() {
                 onClick={() => setIsAccountMenuOpen((prev) => !prev)}
                 aria-label="Account menu"
               >
-                MK
+                {displayInitials}
               </button>
             </div>
           ) : (
@@ -942,7 +958,7 @@ export default function ChatPage() {
                 <div
                   className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white ${accentMainBgClass}`}
                 >
-                  MK
+                  {displayInitials}
                 </div>
                 <div className="flex flex-col items-start">
                   <span
@@ -950,7 +966,7 @@ export default function ChatPage() {
                       isDark ? "text-gray-100" : "text-gray-800"
                     }`}
                   >
-                    Minh Kim
+                    {displayName}
                   </span>
                   <span className="text-[11px] text-gray-500">Free</span>
                 </div>
@@ -987,55 +1003,76 @@ export default function ChatPage() {
                 }`}
               >
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm ${
-                    msg.role === "user"
-                      ? isDark
-                        ? `${accentMainBgClass} text-white`
-                        : `${accentSoftBgClass} text-gray-900`
-                      : isDark
-                        ? "bg-[#202123] text-gray-50 shadow-sm"
-                        : "bg-white text-gray-900 shadow-sm"
+                  className={`flex max-w-[85%] items-start gap-3 ${
+                    msg.role === "user" ? "flex-row-reverse" : "flex-row"
                   }`}
                 >
-                  {msg.role === "assistant" ? (
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        p: ({ node, ...props }) => (
-                          <p className="mb-2 last:mb-0" {...props} />
-                        ),
-                        ul: ({ node, ...props }) => (
-                          <ul
-                            className="mb-2 list-disc pl-5 last:mb-0"
-                            {...props}
-                          />
-                        ),
-                        ol: ({ node, ...props }) => (
-                          <ol
-                            className="mb-2 list-decimal pl-5 last:mb-0"
-                            {...props}
-                          />
-                        ),
-                        li: ({ node, ...props }) => <li {...props} />,
-                        code: ({ node, inline, ...props }: any) =>
-                          inline ? (
-                            <code
-                              className="rounded bg-black/10 px-1 py-0.5 text-xs"
-                              {...props}
-                            />
-                          ) : (
-                            <code
-                              className="block whitespace-pre-wrap rounded-md bg-black/80 px-3 py-2 text-xs text-white"
+                  <div
+                    className={`mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                      msg.role === "user"
+                        ? `${accentMainBgClass} text-white`
+                        : isDark
+                          ? "bg-[#202123] text-white"
+                          : "bg-gray-200 text-gray-800"
+                    }`}
+                  >
+                    {msg.role === "user" ? (
+                      displayInitials
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                  </div>
+                  <div
+                    className={`rounded-2xl px-4 py-3 text-sm ${
+                      msg.role === "user"
+                        ? isDark
+                          ? `${accentMainBgClass} text-white`
+                          : `${accentSoftBgClass} text-gray-900`
+                        : isDark
+                          ? "bg-[#202123] text-gray-50 shadow-sm"
+                          : "bg-white text-gray-900 shadow-sm"
+                    }`}
+                  >
+                    {msg.role === "assistant" ? (
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          p: ({ node, ...props }) => (
+                            <p className="mb-2 last:mb-0" {...props} />
+                          ),
+                          ul: ({ node, ...props }) => (
+                            <ul
+                              className="mb-2 list-disc pl-5 last:mb-0"
                               {...props}
                             />
                           ),
-                      }}
-                    >
-                      {msg.content}
-                    </ReactMarkdown>
-                  ) : (
-                    msg.content
-                  )}
+                          ol: ({ node, ...props }) => (
+                            <ol
+                              className="mb-2 list-decimal pl-5 last:mb-0"
+                              {...props}
+                            />
+                          ),
+                          li: ({ node, ...props }) => <li {...props} />,
+                          code: ({ node, inline, ...props }: any) =>
+                            inline ? (
+                              <code
+                                className="rounded bg-black/10 px-1 py-0.5 text-xs"
+                                {...props}
+                              />
+                            ) : (
+                              <code
+                                className="block whitespace-pre-wrap rounded-md bg-black/80 px-3 py-2 text-xs text-white"
+                                {...props}
+                              />
+                            ),
+                        }}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
+                    ) : (
+                      msg.content
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
